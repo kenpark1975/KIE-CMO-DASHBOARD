@@ -23,6 +23,8 @@ const COLLECTORS = [
   { id: 'kakao_moment', file: 'src/collectors/kakao_moment.js', name: '카카오 모먼트' },
   { id: 'naver_datalab',file: 'src/collectors/naver_datalab.js',name: '네이버 데이터랩' },
   { id: 'instagram',    file: 'src/collectors/instagram.js',    name: '인스타그램' },
+  { id: 'smartstore',   file: 'src/collectors/smartstore.js',      name: '스마트스토어 주문' },
+  { id: 'coupang',      file: 'src/collectors/coupang.js',         name: '쿠팡 주문' },
   { id: 'aggregate',    file: 'src/dashboard/aggregate.js',        name: '대시보드 집계' },
   { id: 'upload_drive', file: 'src/dashboard/upload_drive.js',   name: '구글 드라이브 업로드' },
   { id: 'report',       file: 'src/reporters/daily_report.js',   name: '일별 리포트 메일' },

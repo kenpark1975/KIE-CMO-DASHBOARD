@@ -121,8 +121,10 @@ async function initSheets() {
     'RAW_inventory':      ['snapshot_date','brand','sku','product_name','stock_qty','avg_daily_sales','weeks_remaining','inbound_qty','status','updated_at'],
     'RAW_returns':        ['return_date','brand','channel','sku','return_reason','quantity','return_amount','updated_at'],
     'RAW_sns_instagram':  ['snapshot_date','brand','followers','followers_change','media_id','media_type','published_at','reach','impressions','likes','comments','saved','shares','engagement_rate','updated_at'],
-    'RAW_brand_search':   ['week_start','brand','keyword','search_ratio','updated_at'],
-    'DASHBOARD_input':    ['section','col1','col2','col3','col4','col5','col6','col7','col8'],
+    'RAW_brand_search':        ['week_start','brand','keyword','search_ratio','updated_at'],
+    'RAW_orders_smartstore':   ['date','brand','order_count','item_count','revenue','cancel_count','return_count','cancel_return_rate','updated_at'],
+    'RAW_orders_coupang':      ['date','brand','order_count','item_count','revenue','cancel_count','updated_at'],
+    'DASHBOARD_input':         ['section','col1','col2','col3','col4','col5','col6','col7','col8'],
   };
 
   const auth   = await getAuth();

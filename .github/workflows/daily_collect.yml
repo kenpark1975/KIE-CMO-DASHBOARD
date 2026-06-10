@@ -75,6 +75,9 @@ jobs:
           REPORT_EMAIL_TO=${{ secrets.REPORT_EMAIL_TO }}
           REPORT_EMAIL_PASS=${{ secrets.REPORT_EMAIL_PASS }}
 
+          GOOGLE_DRIVE_FOLDER_ID=${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
+          GOOGLE_DRIVE_FILE_ID=${{ secrets.GOOGLE_DRIVE_FILE_ID }}
+
           COLLECT_DAYS_BACK=2
           LOG_LEVEL=info
           ENVEOF

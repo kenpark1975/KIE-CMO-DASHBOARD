@@ -77,6 +77,9 @@ const __RAW_DATA__ = ${JSON.stringify(rawData)};
 
   fs.writeFileSync(distPath, patched, 'utf8');
 
+  // Netlify 루트 → dashboard.html 리다이렉트
+  fs.writeFileSync(path.join(distDir, '_redirects'), '/  /dashboard.html  200\n', 'utf8');
+
   const totalRows = rawMeta.length + rawGoogle.length + rawNaver.length + rawKakao.length;
   console.log(`[Build] 완료 → ${distPath}`);
   console.log(`  총 광고 데이터: ${totalRows}행`);

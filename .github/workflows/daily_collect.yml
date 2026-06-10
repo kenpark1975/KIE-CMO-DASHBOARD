@@ -20,12 +20,12 @@ jobs:
 
     steps:
       - name: 코드 체크아웃
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Node.js 설정
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: 의존성 설치
@@ -96,7 +96,7 @@ jobs:
 
       - name: 실행 로그 업로드
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: collect-logs-${{ github.run_number }}
           path: logs/

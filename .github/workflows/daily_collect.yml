@@ -97,6 +97,11 @@ jobs:
             node run_all.js --days=$DAYS
           fi
 
+      - name: Netlify 배포
+        run: |
+          npm install -g netlify-cli
+          netlify deploy --prod --dir=dist --site=${{ secrets.NETLIFY_SITE_ID }} --auth=${{ secrets.NETLIFY_AUTH_TOKEN }}
+
       - name: 실행 로그 업로드
         if: always()
         uses: actions/upload-artifact@v4.6.2

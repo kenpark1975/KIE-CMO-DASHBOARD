@@ -1,0 +1,61 @@
+{
+  "brands": [
+    {
+      "code": "BC",
+      "name": "브리즈케어",
+      "name_en": "Breezecare",
+      "color": "#00e5a0",
+      "line": "본앤메이드",
+      "channels": ["자사몰", "스마트스토어", "쿠팡"],
+      "active": true
+    },
+    {
+      "code": "HK",
+      "name": "헬스키친",
+      "name_en": "Hell's Kitchen",
+      "color": "#ff8c42",
+      "line": "본앤메이드",
+      "channels": ["자사몰", "스마트스토어", "쿠팡"],
+      "active": true
+    },
+    {
+      "code": "BD",
+      "name": "뷰티디바이스",
+      "name_en": "Beauty Device",
+      "color": "#c084fc",
+      "line": "HTK",
+      "channels": ["자사몰", "스마트스토어", "쿠팡"],
+      "active": true,
+      "note": "인수 예정 — 브랜드명 확정 후 업데이트"
+    }
+  ],
+
+  "commerce_channels": [
+    { "code": "SELFMALL", "name": "자사몰", "platform": "카페24", "source": "ONEWMS" },
+    { "code": "SMARTSTORE", "name": "스마트스토어", "platform": "네이버", "source": "ONEWMS" },
+    { "code": "COUPANG", "name": "쿠팡", "platform": "쿠팡", "source": "ONEWMS" }
+  ],
+
+  "ad_channels": [
+    { "code": "META", "name": "메타", "source": "api", "roas_target": 300 },
+    { "code": "GOOGLE", "name": "구글", "source": "api", "roas_target": 300 },
+    { "code": "NAVER_SA", "name": "네이버SA", "source": "api", "roas_target": 300 },
+    { "code": "COUPANG_ADS", "name": "쿠팡 애즈", "source": "csv_manual", "roas_target": 300 }
+  ],
+
+  "kpi_thresholds": {
+    "roas_min": 300,
+    "contribution_margin_min": 30,
+    "return_rate_max": 3.5,
+    "ad_spend_ratio_max": 35,
+    "ltv_cac_ratio_min": 3.0,
+    "selfmall_ratio_target": 40
+  },
+
+  "schedule": {
+    "auto_collect_cron": "0 6 * * *",
+    "manual_csv_day": "monday",
+    "report_day": "monday",
+    "report_time": "08:00"
+  }
+}

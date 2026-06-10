@@ -1,0 +1,103 @@
+name: KIE CMO 대시보드 — 일별 수집
+
+on:
+  schedule:
+    # 매일 새벽 2시 (KST) = UTC 17:00 전날
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: '수집 기간 (일)'
+        default: '2'
+      only:
+        description: '특정 수집기만 (예: meta,naver_sa,report)'
+        default: ''
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      # ── 환경 변수 파일 복원 ──────────────────────────────
+      - name: config/.env 생성
+        run: |
+          mkdir -p config
+          cat > config/.env << 'ENVEOF'
+          GOOGLE_SHEET_ID=${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_CREDENTIALS_PATH=config/google_credentials.json
+
+          META_ACCESS_TOKEN=${{ secrets.META_ACCESS_TOKEN }}
+          META_AD_ACCOUNT_ID_BC=${{ secrets.META_AD_ACCOUNT_ID_BC }}
+          META_AD_ACCOUNT_ID_HK=${{ secrets.META_AD_ACCOUNT_ID_HK }}
+          META_AD_ACCOUNT_ID_BD=${{ secrets.META_AD_ACCOUNT_ID_BD }}
+
+          GOOGLE_ADS_CLIENT_ID=${{ secrets.GOOGLE_ADS_CLIENT_ID }}
+          GOOGLE_ADS_CLIENT_SECRET=${{ secrets.GOOGLE_ADS_CLIENT_SECRET }}
+          GOOGLE_ADS_REFRESH_TOKEN=${{ secrets.GOOGLE_ADS_REFRESH_TOKEN }}
+          GOOGLE_ADS_DEVELOPER_TOKEN=${{ secrets.GOOGLE_ADS_DEVELOPER_TOKEN }}
+          GOOGLE_ADS_CUSTOMER_ID_BC=${{ secrets.GOOGLE_ADS_CUSTOMER_ID_BC }}
+
+          NAVER_SA_API_KEY_BNM=${{ secrets.NAVER_SA_API_KEY_BNM }}
+          NAVER_SA_SECRET_KEY_BNM=${{ secrets.NAVER_SA_SECRET_KEY_BNM }}
+          NAVER_SA_CUSTOMER_ID_BNM=${{ secrets.NAVER_SA_CUSTOMER_ID_BNM }}
+          NAVER_SA_API_KEY_HK=${{ secrets.NAVER_SA_API_KEY_HK }}
+          NAVER_SA_SECRET_KEY_HK=${{ secrets.NAVER_SA_SECRET_KEY_HK }}
+          NAVER_SA_CUSTOMER_ID_HK=${{ secrets.NAVER_SA_CUSTOMER_ID_HK }}
+
+          KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}
+          KAKAO_AD_ACCOUNT_ID=${{ secrets.KAKAO_AD_ACCOUNT_ID }}
+          KAKAO_ACCESS_TOKEN=${{ secrets.KAKAO_ACCESS_TOKEN }}
+
+          NAVER_DATALAB_CLIENT_ID=${{ secrets.NAVER_DATALAB_CLIENT_ID }}
+          NAVER_DATALAB_CLIENT_SECRET=${{ secrets.NAVER_DATALAB_CLIENT_SECRET }}
+
+          INSTAGRAM_ACCESS_TOKEN_BC=${{ secrets.INSTAGRAM_ACCESS_TOKEN_BC }}
+          INSTAGRAM_BUSINESS_ID_BC=${{ secrets.INSTAGRAM_BUSINESS_ID_BC }}
+
+          ONEWMS_API_KEY=${{ secrets.ONEWMS_API_KEY }}
+          ONEWMS_API_SECRET=${{ secrets.ONEWMS_API_SECRET }}
+          ONEWMS_BASE_URL=https://api.onewms.co.kr
+
+          REPORT_EMAIL_FROM=${{ secrets.REPORT_EMAIL_FROM }}
+          REPORT_EMAIL_TO=${{ secrets.REPORT_EMAIL_TO }}
+          REPORT_EMAIL_PASS=${{ secrets.REPORT_EMAIL_PASS }}
+
+          COLLECT_DAYS_BACK=2
+          LOG_LEVEL=info
+          ENVEOF
+
+      - name: google_credentials.json 복원
+        run: |
+          echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > config/google_credentials.json
+
+      # ── 수집 실행 ─────────────────────────────────────────
+      - name: 수집 실행
+        run: |
+          DAYS="${{ github.event.inputs.days || '2' }}"
+          ONLY="${{ github.event.inputs.only }}"
+          if [ -n "$ONLY" ]; then
+            node run_all.js --days=$DAYS --only=$ONLY
+          else
+            node run_all.js --days=$DAYS
+          fi
+
+      - name: 실행 로그 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: collect-logs-${{ github.run_number }}
+          path: logs/
+          retention-days: 14

@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>경인전자 CMO 대시보드</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:     #0d0f14; --bg2: #161a23; --bg3: #1e2433;
+  --border: #2a3044; --text: #e2e8f0; --text2: #8892a4; --text3: #4a5568;
+  --bc: #00e5a0; --hk: #ff8c42; --bd: #c084fc;
+  --good: #34d399; --warn: #fbbf24; --bad: #f87171; --blue: #60a5fa;
+  --radius: 10px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body { background: var(--bg); color: var(--text);
+  font-family: 'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif; min-height:100vh; }
+
+/* ── 헤더 ── */
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  padding: 0 24px; height: 56px;
+  display: flex; align-items: center; gap: 16px;
+}
+.logo { font-size:15px; font-weight:700; white-space:nowrap; }
+.logo span { color: var(--bc); }
+
+.brand-tabs { display:flex; gap:4px; }
+.brand-tab {
+  padding:5px 14px; border-radius:6px; font-size:13px; font-weight:600;
+  cursor:pointer; border:none; background:transparent; color:var(--text2); transition:all .15s;
+}
+.brand-tab:hover { background:var(--bg3); color:var(--text); }
+.brand-tab.active { background:var(--bg3); color:var(--text); }
+.brand-tab.bc.active { color:var(--bc); }
+.brand-tab.hk.active { color:var(--hk); }
+.brand-tab.bd.active { color:var(--bd); }
+
+.spacer { flex:1; }
+
+/* ── 날짜 컨트롤 ── */
+.date-controls { display:flex; align-items:center; gap:8px; }
+.preset-btn {
+  padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600;
+  cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text2);
+  transition:all .15s;
+}
+.preset-btn:hover { border-color:var(--text2); color:var(--text); }
+.preset-btn.active { background:var(--bc); color:#000; border-color:var(--bc); }
+.date-sep { color:var(--text3); font-size:12px; }
+.date-input {
+  padding:4px 8px; border-radius:6px; font-size:12px;
+  border:1px solid var(--border); background:var(--bg3); color:var(--text);
+  cursor:pointer; width:110px;
+}
+.date-input:focus { outline:none; border-color:var(--bc); }
+
+.header-right { display:flex; align-items:center; gap:10px; }
+.updated-at { font-size:11px; color:var(--text3); }
+.icon-btn {
+  padding:5px 10px; border-radius:6px; font-size:12px; font-weight:600;
+  cursor:pointer; border:1px solid var(--border); background:var(--bg3); color:var(--text2);
+  transition:all .15s;
+}
+.icon-btn:hover { color:var(--text); border-color:var(--text2); }
+
+/* ── 메인 ── */
+main { flex:1; padding:24px; max-width:1440px; margin:0 auto; width:100%; }
+section { margin-bottom:28px; }
+.section-title {
+  font-size:12px; font-weight:700; color:var(--text3);
+  text-transform:uppercase; letter-spacing:.08em; margin-bottom:14px;
+}
+
+/* ── 카드 ── */
+.card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:20px; }
+
+/* ── KPI ── */
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+@media(max-width:1100px){ .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+.kpi-card {
+  background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius);
+  padding:18px 20px; position:relative; overflow:hidden;
+}
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+.kpi-card.good::before { background:var(--good); }
+.kpi-card.warn::before { background:var(--warn); }
+.kpi-card.bad::before  { background:var(--bad); }
+.kpi-label  { font-size:11px; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
+.kpi-value  { font-size:26px; font-weight:700; line-height:1; margin-bottom:6px; }
+.kpi-change { font-size:12px; color:var(--text2); }
+.kpi-change .up   { color:var(--good); }
+.kpi-change .down { color:var(--bad); }
+
+/* ── 브랜드 요약 ── */
+.brand-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+@media(max-width:900px){ .brand-grid { grid-template-columns:1fr; } }
+.brand-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:20px; }
+.brand-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.brand-name { font-size:16px; font-weight:700; }
+.brand-status { font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; }
+.brand-status.good { background:rgba(52,211,153,.15); color:var(--good); }
+.brand-status.warn { background:rgba(251,191,36,.15);  color:var(--warn); }
+.brand-status.bad  { background:rgba(248,113,113,.15); color:var(--bad); }
+.brand-metrics { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.brand-metric-label { font-size:11px; color:var(--text3); margin-bottom:3px; }
+.brand-metric-value { font-size:18px; font-weight:700; }
+
+/* ── 그리드 ── */
+.two-col   { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+@media(max-width:900px){ .two-col,.three-col { grid-template-columns:1fr; } }
+
+/* ── 차트 ── */
+.chart-wrap { position:relative; height:220px; }
+.chart-title { font-size:13px; font-weight:600; margin-bottom:14px; }
+
+/* ── 테이블 ── */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th {
+  text-align:left; padding:8px 12px;
+  font-size:11px; font-weight:700; color:var(--text3);
+  text-transform:uppercase; letter-spacing:.05em;
+  border-bottom:1px solid var(--border); white-space:nowrap;
+}
+td { padding:10px 12px; border-bottom:1px solid var(--border); }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:rgba(255,255,255,.02); }
+
+.badge { display:inline-block; padding:2px 7px; border-radius:4px; font-size:11px; font-weight:700; }
+.badge-good { background:rgba(52,211,153,.15);  color:var(--good); }
+.badge-warn { background:rgba(251,191,36,.15);   color:var(--warn); }
+.badge-bad  { background:rgba(248,113,113,.15);  color:var(--bad); }
+.badge-bc   { background:rgba(0,229,160,.12);    color:var(--bc); }
+.badge-hk   { background:rgba(255,140,66,.12);   color:var(--hk); }
+.badge-bd   { background:rgba(192,132,252,.12);  color:var(--bd); }
+
+/* ── Kill Switch ── */
+.ks-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+.ks-cell {
+  background:var(--bg3); border:1px solid var(--border);
+  border-radius:8px; padding:14px; text-align:center;
+}
+.ks-cell.bad  { border-color:var(--bad); }
+.ks-cell.warn { border-color:var(--warn); }
+.ks-brand { font-size:11px; font-weight:700; margin-bottom:4px; }
+.ks-kpi   { font-size:12px; color:var(--text2); margin-bottom:8px; }
+.ks-value { font-size:20px; font-weight:700; }
+.ks-threshold { font-size:10px; color:var(--text3); margin-top:3px; }
+
+/* ── SNS ── */
+.sns-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+@media(max-width:900px){ .sns-grid { grid-template-columns:1fr; } }
+.sns-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:20px; }
+.sns-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.sns-followers { font-size:24px; font-weight:700; }
+.sns-followers-label { font-size:11px; color:var(--text3); margin-bottom:4px; }
+.sns-metrics-row { display:flex; gap:16px; margin-top:12px; }
+.sns-metric { flex:1; }
+.sns-metric-label { font-size:10px; color:var(--text3); margin-bottom:2px; }
+.sns-metric-value { font-size:15px; font-weight:700; }
+
+/* ── 로딩/빈값 ── */
+.empty { color:var(--text3); font-size:13px; padding:24px; text-align:center; }
+.no-data { color:var(--text3); font-size:12px; font-style:italic; }
+</style>
+</head>
+
+<body>
+<div style="display:flex;flex-direction:column;min-height:100vh">
+
+<header>
+  <div class="logo">경인전자 <span>CMO</span></div>
+
+  <div class="brand-tabs" id="brandTabs">
+    <button class="brand-tab active" data-brand="ALL">전체</button>
+    <button class="brand-tab bc"     data-brand="BC">브리즈케어</button>
+    <button class="brand-tab hk"     data-brand="HK">헬스키친</button>
+    <button class="brand-tab bd"     data-brand="BD">뷰티디바이스</button>
+  </div>
+
+  <div class="spacer"></div>
+
+  <div class="date-controls">
+    <button class="preset-btn active" data-days="7">7일</button>
+    <button class="preset-btn"        data-days="30">30일</button>
+    <button class="preset-btn"        data-days="90">90일</button>
+    <button class="preset-btn"        data-days="0">직접입력</button>
+    <span class="date-sep" id="customDateWrap" style="display:none">
+      <input type="date" id="dateFrom" class="date-input">
+      ~
+      <input type="date" id="dateTo"   class="date-input">
+      <button class="preset-btn" id="applyCustom">적용</button>
+    </span>
+  </div>
+
+  <div class="header-right">
+    <span class="updated-at" id="updatedAt">—</span>
+    <button class="icon-btn" onclick="rerender()">↺ 새로고침</button>
+  </div>
+</header>
+
+<main id="main" style="flex:1;padding:24px;max-width:1440px;margin:0 auto;width:100%">
+  <div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--text3);font-size:13px">
+    데이터 로딩 중...
+  </div>
+</main>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   상수 / 설정
+══════════════════════════════════════════════════════ */
+const BRAND_COLORS = { BC:'#00e5a0', HK:'#ff8c42', BD:'#c084fc' };
+const BRAND_NAMES  = { BC:'브리즈케어', HK:'헬스키친', BD:'뷰티디바이스' };
+const BRANDS       = ['BC','HK','BD'];
+const ROAS_MIN     = 300;
+
+/* ══════════════════════════════════════════════════════
+   상태
+══════════════════════════════════════════════════════ */
+let STATE = {
+  brand:    'ALL',
+  dateFrom: '',
+  dateTo:   '',
+  preset:   7,
+};
+let RAW = null;   // __RAW_DATA__ 주입 후 설정
+let charts = {};
+
+/* ══════════════════════════════════════════════════════
+   날짜 유틸
+══════════════════════════════════════════════════════ */
+function today()     { return new Date().toISOString().split('T')[0]; }
+function daysAgo(n)  { const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().split('T')[0]; }
+function prevPeriod(from, to) {
+  const msFrom = new Date(from).getTime();
+  const msTo   = new Date(to).getTime();
+  const diff   = msTo - msFrom + 86400000;
+  const pTo    = new Date(msFrom - 86400000).toISOString().split('T')[0];
+  const pFrom  = new Date(msFrom - diff).toISOString().split('T')[0];
+  return { from: pFrom, to: pTo };
+}
+
+function applyPreset(days) {
+  if (days === 0) return;   // 직접입력 모드
+  STATE.preset   = days;
+  STATE.dateTo   = daysAgo(1);
+  STATE.dateFrom = daysAgo(days);
+  document.getElementById('dateFrom').value = STATE.dateFrom;
+  document.getElementById('dateTo').value   = STATE.dateTo;
+}
+
+/* ══════════════════════════════════════════════════════
+   집계 (클라이언트 사이드)
+══════════════════════════════════════════════════════ */
+// 광고 RAW → 브랜드×채널 집계
+// meta cols:   [date,brand,campaign,adset,ad,spend,imp,clicks,ctr,cpc,purchases,revenue,roas,cac,updated]
+// google cols: [date,brand,campaign,spend,imp,clicks,ctr,cpc,conv,revenue,roas,updated]
+// naver cols:  [date,brand,campaign,spend,imp,clicks,ctr,cpc,conv,revenue,roas,updated]
+function normalizeAdRows(rows, type) {
+  return rows.map(r => {
+    if (type === 'meta') {
+      return { date:r[0], brand:r[1], spend:+r[5]||0, imp:+r[6]||0, clicks:+r[7]||0, conv:+r[10]||0, revenue:+r[11]||0 };
+    }
+    // google / naver / kakao: same layout
+    return { date:r[0], brand:r[1], spend:+r[3]||0, imp:+r[4]||0, clicks:+r[5]||0, conv:+r[8]||0, revenue:+r[9]||0 };
+  });
+}
+
+function filterByDate(rows, from, to) {
+  return rows.filter(r => r.date >= from && r.date <= to);
+}
+
+function aggregateByBrand(rows) {
+  const map = {};
+  for (const r of rows) {
+    if (!map[r.brand]) map[r.brand] = { spend:0, imp:0, clicks:0, conv:0, revenue:0 };
+    const b = map[r.brand];
+    b.spend   += r.spend;
+    b.imp     += r.imp;
+    b.clicks  += r.clicks;
+    b.conv    += r.conv;
+    b.revenue += r.revenue;
+  }
+  return map;
+}
+
+function aggregateAll(rows) {
+  const s = { spend:0, imp:0, clicks:0, conv:0, revenue:0 };
+  for (const r of rows) { s.spend+=r.spend; s.imp+=r.imp; s.clicks+=r.clicks; s.conv+=r.conv; s.revenue+=r.revenue; }
+  return s;
+}
+
+// 일별 트렌드 (광고비, ROAS)
+function dailyTrend(rows, from, to) {
+  const map = {};
+  for (const r of rows) {
+    if (r.date < from || r.date > to) continue;
+    if (!map[r.date]) map[r.date] = { spend:0, revenue:0 };
+    map[r.date].spend   += r.spend;
+    map[r.date].revenue += r.revenue;
+  }
+  // from~to 날짜 순서
+  const dates = [];
+  let d = new Date(from);
+  const end = new Date(to);
+  while (d <= end) {
+    dates.push(d.toISOString().split('T')[0]);
+    d.setDate(d.getDate()+1);
+  }
+  return dates.map(dt => ({
+    date: dt,
+    spend:   map[dt]?.spend   || 0,
+    revenue: map[dt]?.revenue || 0,
+    roas:    map[dt]?.spend > 0 ? Math.round(map[dt].revenue / map[dt].spend * 100) : 0,
+  }));
+}
+
+function buildDashboardData() {
+  if (!RAW) return null;
+  const { dateFrom: from, dateTo: to, brand } = STATE;
+  const { from: pFrom, to: pTo } = prevPeriod(from, to);
+
+  // 모든 광고 채널 정규화
+  const allAdRows = [
+    ...normalizeAdRows(RAW.ads_meta   || [], 'meta'),
+    ...normalizeAdRows(RAW.ads_google || [], 'other'),
+    ...normalizeAdRows(RAW.ads_naver  || [], 'other'),
+    ...normalizeAdRows(RAW.ads_kakao  || [], 'other'),
+  ];
+
+  const metaRows   = normalizeAdRows(RAW.ads_meta   || [], 'meta');
+  const googleRows = normalizeAdRows(RAW.ads_google || [], 'other');
+  const naverRows  = normalizeAdRows(RAW.ads_naver  || [], 'other');
+  const kakaoRows  = normalizeAdRows(RAW.ads_kakao  || [], 'other');
+
+  // 브랜드 필터
+  const brandFilter = r => brand === 'ALL' || r.brand === brand;
+
+  // 현재 기간 집계
+  const cur  = filterByDate(allAdRows.filter(brandFilter), from, to);
+  const prev = filterByDate(allAdRows.filter(brandFilter), pFrom, pTo);
+  const curTotals  = aggregateAll(cur);
+  const prevTotals = aggregateAll(prev);
+
+  // 채널별
+  const channelAgg = (rows, label) => {
+    const r = aggregateAll(filterByDate(rows.filter(brandFilter), from, to));
+    return { label, ...r, roas: r.spend>0 ? Math.round(r.revenue/r.spend*100) : 0,
+      cpc: r.clicks>0 ? Math.round(r.spend/r.clicks) : 0,
+      cvr: r.clicks>0 ? Math.round(r.conv/r.clicks*10000)/100 : 0 };
+  };
+
+  // 브랜드별
+  const brandMap = aggregateByBrand(cur);
+  const prevBrandMap = aggregateByBrand(filterByDate(allAdRows.filter(brandFilter), pFrom, pTo));
+
+  // 일별 트렌드 (최대 90일)
+  const trend = dailyTrend(allAdRows.filter(brandFilter), from, to);
+
+  // 브랜드 검색량
+  const searchRows = (RAW.brand_search || [])
+    .filter(r => r[0] >= from && r[0] <= to && (brand === 'ALL' || r[1] === brand))
+    .map(r => ({ week: r[0], brand: r[1], keyword: r[2], ratio: +r[3]||0 }));
+
+  return {
+    curTotals, prevTotals,
+    brandMap, prevBrandMap,
+    channels: [
+      channelAgg(metaRows,   '메타'),
+      channelAgg(googleRows, '구글'),
+      channelAgg(naverRows,  '네이버SA'),
+      channelAgg(kakaoRows,  '카카오'),
+    ],
+    trend,
+    searchRows,
+    instagram: RAW.instagram || [],
+    from, to, pFrom, pTo,
+  };
+}
+
+/* ══════════════════════════════════════════════════════
+   포맷 유틸
+══════════════════════════════════════════════════════ */
+function fmt(n, unit='') {
+  const v = parseFloat(n)||0;
+  if (unit==='원') {
+    if (v>=100_000_000) return (v/100_000_000).toFixed(1)+'억원';
+    if (v>=10_000)      return Math.round(v/10000)+'만원';
+    return v.toLocaleString()+'원';
+  }
+  if (unit==='%') return v.toFixed(1)+'%';
+  return v.toLocaleString();
+}
+
+function chg(cur, prev) {
+  if (!prev||prev===0) return '';
+  const pct = ((cur-prev)/Math.abs(prev)*100).toFixed(1);
+  const cls = pct>=0?'up':'down';
+  return `<span class="${cls}">${pct>=0?'+':''}${pct}%</span> vs 전기간`;
+}
+
+function statusCls(v, threshold, higher=true) {
+  if (higher) return v>=threshold?'good':v>=threshold*.85?'warn':'bad';
+  return v<=threshold?'good':v<=threshold*1.15?'warn':'bad';
+}
+
+/* ══════════════════════════════════════════════════════
+   렌더링
+══════════════════════════════════════════════════════ */
+function destroyCharts() {
+  Object.values(charts).forEach(c=>c?.destroy());
+  charts={};
+}
+
+function render() {
+  if (!RAW) return;
+  const data = buildDashboardData();
+  if (!data) return;
+  destroyCharts();
+
+  const main = document.getElementById('main');
+  main.innerHTML =
+    renderKPI(data) +
+    renderBrandSummary(data) +
+    renderTrend(data) +
+    renderChannels(data) +
+    renderBrandSearch(data) +
+    renderKillSwitch(data);
+
+  setTimeout(() => {
+    initTrendChart(data);
+    initChannelChart(data);
+    initBrandSearchChart(data);
+  }, 0);
+}
+
+/* ── 1. KPI ── */
+function renderKPI(d) {
+  const { curTotals: c, prevTotals: p } = d;
+  const roas     = c.spend>0 ? Math.round(c.revenue/c.spend*100) : 0;
+  const prevRoas = p.spend>0 ? Math.round(p.revenue/p.spend*100) : 0;
+  const cpc      = c.clicks>0 ? Math.round(c.spend/c.clicks) : 0;
+  const cvr      = c.clicks>0 ? Math.round(c.conv/c.clicks*10000)/100 : 0;
+
+  const kpis = [
+    { label:'광고비',     val: fmt(c.spend,'원'),     prev: chg(c.spend,   p.spend),   cls: '' },
+    { label:'광고매출',   val: fmt(c.revenue,'원'),   prev: chg(c.revenue, p.revenue), cls: '' },
+    { label:'통합 ROAS',  val: roas+'%',              prev: chg(roas, prevRoas),        cls: statusCls(roas, ROAS_MIN) },
+    { label:'노출',       val: fmt(c.imp),            prev: chg(c.imp,     p.imp),      cls: '' },
+    { label:'클릭',       val: fmt(c.clicks),         prev: chg(c.clicks,  p.clicks),   cls: '' },
+    { label:'전환',       val: fmt(c.conv),           prev: chg(c.conv,    p.conv),     cls: '' },
+    { label:'평균 CPC',   val: fmt(cpc,'원'),         prev: '',                          cls: '' },
+    { label:'전환율',     val: fmt(cvr,'%'),          prev: '',                          cls: '' },
+  ];
+
+  const cards = kpis.map(k => `
+    <div class="kpi-card ${k.cls}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.val||'—'}</div>
+      ${k.prev ? `<div class="kpi-change">${k.prev}</div>` : ''}
+    </div>`).join('');
+
+  return `<section>
+    <div class="section-title">기간 핵심 KPI <span style="font-size:11px;font-weight:400;color:var(--text3);margin-left:8px">${d.from} ~ ${d.to}</span></div>
+    <div class="kpi-grid">${cards}</div>
+  </section>`;
+}
+
+/* ── 2. 브랜드 요약 ── */
+function renderBrandSummary(d) {
+  const { brand } = STATE;
+  const targets = brand==='ALL' ? BRANDS : [brand];
+
+  const cards = targets.map(b => {
+    const c    = d.brandMap[b]     || { spend:0, revenue:0, clicks:0, conv:0 };
+    const p    = d.prevBrandMap[b] || { spend:0, revenue:0 };
+    const roas     = c.spend>0 ? Math.round(c.revenue/c.spend*100) : 0;
+    const prevRoas = p.spend>0 ? Math.round(p.revenue/p.spend*100) : 0;
+    const cls  = statusCls(roas, ROAS_MIN);
+    const label = cls==='good'?'정상':cls==='warn'?'주의':'경보';
+    const color = BRAND_COLORS[b];
+    return `
+      <div class="brand-card" style="border-top:3px solid ${color}">
+        <div class="brand-card-header">
+          <span class="brand-name" style="color:${color}">${BRAND_NAMES[b]}</span>
+          <span class="brand-status ${cls}">${label}</span>
+        </div>
+        <div class="brand-metrics">
+          <div><div class="brand-metric-label">광고비</div><div class="brand-metric-value">${fmt(c.spend,'원')}</div></div>
+          <div><div class="brand-metric-label">광고매출</div><div class="brand-metric-value">${fmt(c.revenue,'원')}</div></div>
+          <div><div class="brand-metric-label">ROAS</div>
+            <div class="brand-metric-value" style="color:var(--${cls==='good'?'good':cls==='warn'?'warn':'bad'})">${roas}%</div></div>
+          <div><div class="brand-metric-label">ROAS 증감</div><div class="brand-metric-value" style="font-size:13px">${chg(roas,prevRoas)||'—'}</div></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `<section>
+    <div class="section-title">브랜드별 요약</div>
+    <div class="brand-grid">${cards}</div>
+  </section>`;
+}
+
+/* ── 3. 일별 트렌드 ── */
+function renderTrend(d) {
+  return `<section>
+    <div class="section-title">일별 트렌드</div>
+    <div class="two-col">
+      <div class="card"><div class="chart-title">광고비 추이</div><div class="chart-wrap"><canvas id="chartSpend"></canvas></div></div>
+      <div class="card"><div class="chart-title">ROAS 추이</div><div class="chart-wrap"><canvas id="chartRoas"></canvas></div></div>
+    </div>
+  </section>`;
+}
+
+function initTrendChart(d) {
+  const labels = d.trend.map(r => r.date.slice(5));  // MM-DD
+
+  const mkChart = (id, label, data, color) => {
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+    charts[id] = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{ label, data, borderColor: color, backgroundColor: color+'22',
+          fill: true, tension: 0.4, pointRadius: labels.length > 30 ? 0 : 3 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend:{display:false}, tooltip:{callbacks:{label:c=>' '+c.raw?.toLocaleString()}} },
+        scales: {
+          x: { grid:{color:'#2a3044'}, ticks:{color:'#8892a4',font:{size:10},maxTicksLimit:10} },
+          y: { grid:{color:'#2a3044'}, ticks:{color:'#8892a4',font:{size:10}} },
+        },
+      },
+    });
+  };
+
+  mkChart('chartSpend', '광고비', d.trend.map(r=>r.spend),   '#60a5fa');
+  mkChart('chartRoas',  'ROAS%',  d.trend.map(r=>r.roas),    '#00e5a0');
+}
+
+/* ── 4. 채널별 ── */
+function renderChannels(d) {
+  const rows = d.channels.filter(c=>c.spend>0).map(c => `<tr>
+    <td><strong>${c.label}</strong></td>
+    <td>${fmt(c.spend,'원')}</td>
+    <td>${fmt(c.revenue,'원')}</td>
+    <td><span class="badge badge-${statusCls(c.roas,ROAS_MIN)}">${c.roas}%</span></td>
+    <td>${fmt(c.cpc,'원')}</td>
+    <td>${fmt(c.imp)}</td>
+    <td>${fmt(c.clicks)}</td>
+    <td>${fmt(c.cvr,'%')}</td>
+  </tr>`).join('') || '<tr><td colspan="8" class="empty">데이터 없음</td></tr>';
+
+  return `<section>
+    <div class="section-title">채널별 광고 성과</div>
+    <div class="two-col" style="margin-bottom:12px">
+      <div class="card"><div class="chart-title">채널별 ROAS</div><div class="chart-wrap"><canvas id="chartChannel"></canvas></div></div>
+      <div class="card"><div class="chart-title">채널별 광고비</div><div class="chart-wrap"><canvas id="chartSpendPie"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>채널</th><th>광고비</th><th>광고매출</th><th>ROAS</th><th>CPC</th><th>노출</th><th>클릭</th><th>전환율</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  </section>`;
+}
+
+function initChannelChart(d) {
+  const active = d.channels.filter(c=>c.spend>0);
+  if (!active.length) return;
+  const labels = active.map(c=>c.label);
+  const colors = ['#00e5a0','#60a5fa','#ff8c42','#c084fc'];
+
+  const bar = document.getElementById('chartChannel');
+  if (bar) charts.channel = new Chart(bar, {
+    type: 'bar',
+    data: { labels, datasets:[{ label:'ROAS %', data:active.map(c=>c.roas), backgroundColor:colors, borderRadius:6 }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>' '+c.raw+'%'}} },
+      scales:{ x:{grid:{color:'#2a3044'},ticks:{color:'#8892a4'}}, y:{grid:{color:'#2a3044'},ticks:{color:'#8892a4'}} },
+    },
+  });
+
+  const pie = document.getElementById('chartSpendPie');
+  if (pie) charts.spendPie = new Chart(pie, {
+    type: 'doughnut',
+    data: { labels, datasets:[{ data:active.map(c=>c.spend), backgroundColor:colors, borderWidth:0 }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'right',labels:{color:'#8892a4',font:{size:12}}},
+        tooltip:{callbacks:{label:c=>' '+fmt(c.raw,'원')}},
+      },
+      cutout:'65%',
+    },
+  });
+}
+
+/* ── 5. 브랜드 검색량 ── */
+function renderBrandSearch(d) {
+  if (!d.searchRows.length) return '';
+  return `<section>
+    <div class="section-title">브랜드 검색량 트렌드 (네이버 데이터랩)</div>
+    <div class="card"><div class="chart-wrap" style="height:200px"><canvas id="chartSearch"></canvas></div></div>
+  </section>`;
+}
+
+function initBrandSearchChart(d) {
+  const ctx = document.getElementById('chartSearch');
+  if (!ctx || !d.searchRows.length) return;
+  const { brand } = STATE;
+  const targets = brand==='ALL' ? BRANDS : [brand];
+  const weeks   = [...new Set(d.searchRows.map(r=>r.week))].sort();
+
+  const datasets = targets.map(b => ({
+    label: BRAND_NAMES[b],
+    data:  weeks.map(w => d.searchRows.find(r=>r.week===w&&r.brand===b)?.ratio || null),
+    borderColor: BRAND_COLORS[b], backgroundColor: BRAND_COLORS[b]+'22',
+    fill:true, tension:0.4, spanGaps:true,
+  }));
+
+  charts.search = new Chart(ctx, {
+    type:'line',
+    data:{ labels:weeks.map(w=>w.slice(5)), datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{labels:{color:'#8892a4',font:{size:11}}}, tooltip:{} },
+      scales:{
+        x:{grid:{color:'#2a3044'},ticks:{color:'#8892a4',font:{size:11}}},
+        y:{grid:{color:'#2a3044'},ticks:{color:'#8892a4',font:{size:11}}},
+      },
+    },
+  });
+}
+
+/* ── 6. Kill Switch ── */
+function renderKillSwitch(d) {
+  const { brand } = STATE;
+  const targets = brand==='ALL' ? BRANDS : [brand];
+
+  const cells = targets.flatMap(b => {
+    const c    = d.brandMap[b] || { spend:0, revenue:0 };
+    const roas = c.spend>0 ? Math.round(c.revenue/c.spend*100) : 0;
+    const cls  = statusCls(roas, ROAS_MIN);
+    const color = BRAND_COLORS[b];
+    return [
+      `<div class="ks-cell ${cls!=='good'?cls:''}">
+        <div class="ks-brand" style="color:${color}">${BRAND_NAMES[b]}</div>
+        <div class="ks-kpi">ROAS</div>
+        <div class="ks-value" style="color:var(--${cls==='good'?'good':cls==='warn'?'warn':'bad'})">${roas}%</div>
+        <div class="ks-threshold">기준 ${ROAS_MIN}%</div>
+      </div>`,
+    ];
+  }).join('');
+
+  return `<section>
+    <div class="section-title">Kill Switch 모니터</div>
+    <div class="card"><div class="ks-grid">${cells||'<div class="empty">데이터 없음</div>'}</div></div>
+  </section>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   이벤트 / 초기화
+══════════════════════════════════════════════════════ */
+// 브랜드 탭
+document.getElementById('brandTabs').addEventListener('click', e => {
+  const btn = e.target.closest('.brand-tab');
+  if (!btn) return;
+  document.querySelectorAll('.brand-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  STATE.brand = btn.dataset.brand;
+  render();
+});
+
+// 기간 프리셋
+document.querySelectorAll('.preset-btn[data-days]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const days = +btn.dataset.days;
+    document.querySelectorAll('.preset-btn[data-days]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const customWrap = document.getElementById('customDateWrap');
+    if (days === 0) {
+      customWrap.style.display = 'inline-flex';
+      customWrap.style.alignItems = 'center';
+      customWrap.style.gap = '6px';
+    } else {
+      customWrap.style.display = 'none';
+      applyPreset(days);
+      render();
+    }
+  });
+});
+
+// 직접입력 적용
+document.getElementById('applyCustom').addEventListener('click', () => {
+  const from = document.getElementById('dateFrom').value;
+  const to   = document.getElementById('dateTo').value;
+  if (!from || !to || from > to) { alert('날짜 범위를 올바르게 입력하세요.'); return; }
+  STATE.dateFrom = from;
+  STATE.dateTo   = to;
+  STATE.preset   = 0;
+  render();
+});
+
+function rerender() { render(); }
+
+// 내장 데이터로 초기화 (aggregate.js가 주입)
+function initWithEmbeddedData(data) {
+  RAW = data;
+  applyPreset(7);
+  render();
+  const gen = data.generated_at ? new Date(data.generated_at).toLocaleString('ko-KR') : '';
+  document.getElementById('updatedAt').textContent = '생성: ' + gen;
+}
+
+// 초기화 — __RAW_DATA__ 가 주입되어 있으면 바로 실행, 없으면 안내
+if (typeof __RAW_DATA__ !== 'undefined') {
+  initWithEmbeddedData(__RAW_DATA__);
+} else {
+  document.getElementById('main').innerHTML = `
+    <div style="background:rgba(251,191,36,.1);border:1px solid var(--warn);border-radius:8px;padding:20px;text-align:center;color:var(--warn);font-size:13px;line-height:2">
+      ⚠ 데이터 없음<br>
+      <code style="font-size:12px;color:var(--text2)">node src/dashboard/aggregate.js</code> 실행 후
+      <code style="font-size:12px;color:var(--text2)">dist/dashboard.html</code>을 여세요.
+    </div>`;
+}
+</script>
+</body>
+</html>

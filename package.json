@@ -1,0 +1,28 @@
+{
+  "name": "kie-cmo-dashboard",
+  "version": "1.0.0",
+  "description": "경인전자 CMO 마케팅 대시보드 — 데이터 파이프라인",
+  "main": "scripts/run_all.js",
+  "scripts": {
+    "start": "node scripts/run_all.js",
+    "init": "node src/sheets/writer.js --init",
+    "collect:meta": "node src/collectors/meta.js",
+    "collect:google": "node src/collectors/google_ads.js",
+    "collect:naver": "node src/collectors/naver_sa.js",
+    "collect:onewms": "node src/collectors/onewms.js",
+    "collect:instagram": "node src/collectors/instagram.js",
+    "collect:datalab": "node src/collectors/naver_datalab.js",
+    "upload:coupang": "node scripts/upload_csv.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.0.0",
+    "googleapis": "^140.0.0",
+    "node-cron": "^3.0.0",
+    "nodemailer": "^8.0.10",
+    "papaparse": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

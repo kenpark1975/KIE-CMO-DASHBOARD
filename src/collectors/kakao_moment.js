@@ -13,8 +13,37 @@ const axios = require('axios');
 const { writeToSheet } = require('../sheets/writer');
 
 const REST_API_KEY   = process.env.KAKAO_REST_API_KEY;
-const ACCESS_TOKEN   = process.env.KAKAO_ACCESS_TOKEN;   // OAuth Bearer 토큰 (우선 사용)
+const REFRESH_TOKEN  = process.env.KAKAO_REFRESH_TOKEN;  // 있으면 매 실행마다 새 토큰 발급
+const CLIENT_SECRET  = process.env.KAKAO_CLIENT_SECRET;
+let   ACCESS_TOKEN   = process.env.KAKAO_ACCESS_TOKEN;   // OAuth Bearer 토큰 (fallback)
 const BASE_URL       = 'https://apis.moment.kakao.com/openapi/v4';
+
+// refresh_token으로 access_token 갱신 (access_token은 약 6시간 만료라 매 실행 시 갱신)
+async function refreshAccessToken() {
+  if (!REFRESH_TOKEN || !CLIENT_SECRET) return false;
+  try {
+    const res = await axios.post(
+      'https://kauth.kakao.com/oauth/token',
+      new URLSearchParams({
+        grant_type:    'refresh_token',
+        client_id:     REST_API_KEY,
+        client_secret: CLIENT_SECRET,
+        refresh_token: REFRESH_TOKEN,
+      }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+    ACCESS_TOKEN = res.data.access_token;
+    console.log('[KakaoMoment] access_token 갱신 완료');
+    if (res.data.refresh_token) {
+      console.warn('[KakaoMoment] ⚠️  새 refresh_token 발급됨 — GitHub Secrets의 KAKAO_REFRESH_TOKEN을 아래 값으로 교체 필요:');
+      console.warn(`             ${res.data.refresh_token}`);
+    }
+    return true;
+  } catch (e) {
+    console.error('[KakaoMoment] 토큰 갱신 실패:', e.response?.data?.error_description || e.message);
+    return false;
+  }
+}
 
 const AD_ACCOUNTS = [
   { brand: 'BC', adAccountId: process.env.KAKAO_AD_ACCOUNT_ID },
@@ -125,6 +154,8 @@ async function collectBrand({ brand, adAccountId }) {
 }
 
 async function main() {
+  await refreshAccessToken();
+
   if (!ACCESS_TOKEN && !REST_API_KEY) {
     console.error('KAKAO_ACCESS_TOKEN 또는 KAKAO_REST_API_KEY가 설정되지 않았습니다.');
     process.exit(1);

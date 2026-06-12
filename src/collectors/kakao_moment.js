@@ -15,7 +15,7 @@ const { writeToSheet } = require('../sheets/writer');
 const REST_API_KEY   = process.env.KAKAO_REST_API_KEY;
 const REFRESH_TOKEN  = process.env.KAKAO_REFRESH_TOKEN;  // 있으면 매 실행마다 새 토큰 발급
 const CLIENT_SECRET  = process.env.KAKAO_CLIENT_SECRET;
-let   ACCESS_TOKEN   = process.env.KAKAO_ACCESS_TOKEN;   // OAuth Bearer 토큰 (fallback)
+let   ACCESS_TOKEN   = process.env.KAKAO_ACCESS_TOKEN;   // 비즈니스 토큰 (만료 없음, 우선 사용)
 const BASE_URL       = 'https://apis.moment.kakao.com/openapi/v4';
 
 // refresh_token으로 access_token 갱신 (access_token은 약 6시간 만료라 매 실행 시 갱신)
@@ -87,53 +87,71 @@ const headers = () => ({
   'Content-Type': 'application/json',
 });
 
-// 캠페인 목록 조회
-async function fetchCampaigns(adAccountId) {
-  const res = await axios.get(`${BASE_URL}/campaigns`, {
-    headers: headers(),
-    params: { adAccountId, config: JSON.stringify({ limit: 100 }) },
-  });
-  return res.data?.content || res.data?.data || res.data || [];
+// 캠페인 목록 조회 (id → name 매핑용) — 실패해도 보고서 수집은 계속
+async function fetchCampaignNames(adAccountId) {
+  try {
+    const res = await axios.get(`${BASE_URL}/campaigns`, {
+      headers: { ...headers(), adAccountId },
+    });
+    const list = res.data?.content || res.data?.data || res.data || [];
+    const map = {};
+    for (const c of (Array.isArray(list) ? list : [])) {
+      map[String(c.id ?? c.campaignId)] = c.name ?? c.campaignName ?? '';
+    }
+    return map;
+  } catch (e) {
+    console.warn('  (캠페인 이름 조회 실패 — campaign_id로 표기):', JSON.stringify(e.response?.data || e.message).slice(0, 200));
+    return {};
+  }
 }
 
-// 캠페인 레벨 일별 보고서 조회
+// 광고계정 보고서 조회 (캠페인 레벨, 일별)
+// 문서: GET /adAccounts/report — adAccountId는 "헤더", metricsGroup(단수), timeUnit=DAY
+// start/end: yyyyMMdd, 최대 31일. 호출 제한: 5초당 1회.
 async function fetchReport(adAccountId, start, end) {
   const res = await axios.get(`${BASE_URL}/adAccounts/report`, {
-    headers: headers(),
+    headers: { ...headers(), adAccountId },
     params: {
-      adAccountId,
+      level:        'CAMPAIGN',
+      metricsGroup: 'BASIC,PIXEL_SDK_CONVERSION',
+      timeUnit:     'DAY',
       start,
       end,
-      dimension:     'DAY',
-      level:         'CAMPAIGN',
-      metricsGroups: 'BASIC',
     },
   });
-  return res.data?.rows || res.data?.data || res.data || [];
+  return res.data?.data || [];
 }
 
-function toSheetRow(brand, row) {
-  // 카카오 응답 구조: row.dimensions / row.metrics
-  const dim     = row.dimensions || {};
-  const met     = row.metrics    || {};
+function toSheetRow(brand, row, campaignNames) {
+  const dim = row.dimensions || {};
+  const met = row.metrics    || {};
 
-  const date    = dim.date
-    ? `${dim.date.slice(0,4)}-${dim.date.slice(4,6)}-${dim.date.slice(6,8)}`
-    : '';
-  const camp    = dim.campaignName || dim.campaign_name || '';
-  const spend   = parseFloat(met.cost  || met.spend || 0);
-  const imps    = parseInt(met.imp     || met.impressions || 0);
-  const clicks  = parseInt(met.click   || met.clicks || 0);
+  // start: "2020-01-01" 또는 "20200101" 형태 모두 대응
+  let date = String(row.start || '');
+  if (/^\d{8}$/.test(date)) date = `${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}`;
+
+  const campId = String(dim.campaign_id ?? dim.campaignId ?? '');
+  const camp   = campaignNames[campId] || campId || '(광고계정 전체)';
+
+  const spend   = parseFloat(met.cost || 0);
+  const imps    = parseInt(met.imp || 0);
+  const clicks  = parseInt(met.click || 0);
   const ctr     = Math.round(parseFloat(met.ctr || 0) * 100) / 100;
-  const cpc     = Math.round(parseFloat(met.cpc || 0));
-  const conv    = Math.round(parseFloat(met.conversion || met.conv || 0));
-  const revenue = Math.round(parseFloat(met.convValue  || met.revenue || 0));
-  const roas    = spend > 0 ? Math.round((revenue / spend) * 100) / 100 : 0;
+  const cpc     = clicks > 0 ? Math.round(spend / clicks) : 0;
+
+  // 픽셀 전환 지표 — 키 이름이 계정 설정에 따라 다를 수 있어 방어적으로 탐색
+  let conv = 0, revenue = 0;
+  for (const [k, v] of Object.entries(met)) {
+    const key = k.toLowerCase();
+    if (key.includes('purchase') && key.includes('value')) revenue += parseFloat(v || 0);
+    else if (key.includes('purchase')) conv += parseFloat(v || 0);
+  }
+  const roas = spend > 0 ? Math.round((revenue / spend) * 100) / 100 : 0;
 
   return [
     date, brand, camp,
     Math.round(spend), imps, clicks,
-    ctr, cpc, conv, revenue, roas,
+    ctr, cpc, Math.round(conv), Math.round(revenue), roas,
     new Date().toISOString(),
   ];
 }
@@ -147,14 +165,21 @@ async function collectBrand({ brand, adAccountId }) {
   const { start, end } = getDateRange();
   console.log(`  → ${brand} (${adAccountId}) 수집 중...`);
 
+  const campaignNames = await fetchCampaignNames(adAccountId);
+  await new Promise(r => setTimeout(r, 5500));   // 보고서 API: 5초당 1회 제한
+
   const rows = await fetchReport(adAccountId, start, end);
-  const result = rows.map(r => toSheetRow(brand, r));
+  const result = rows
+    .filter(r => r.metrics && Object.keys(r.metrics).length > 0)
+    .map(r => toSheetRow(brand, r, campaignNames));
   console.log(`  ✓ ${brand}: ${result.length}행`);
   return result;
 }
 
 async function main() {
-  await refreshAccessToken();
+  // KAKAO_ACCESS_TOKEN(비즈니스 토큰)이 있으면 그대로 사용 — 모먼트 API는 비즈니스 토큰 필수.
+  // 없을 때만 refresh_token으로 일반 로그인 토큰 발급 시도 (fallback).
+  if (!ACCESS_TOKEN) await refreshAccessToken();
 
   if (!ACCESS_TOKEN && !REST_API_KEY) {
     console.error('KAKAO_ACCESS_TOKEN 또는 KAKAO_REST_API_KEY가 설정되지 않았습니다.');
@@ -174,7 +199,7 @@ async function main() {
       const rows = await collectBrand(account);
       allRows.push(...rows);
     } catch (err) {
-      const detail = err.response?.data?.msg || err.response?.data?.message || err.message;
+      const detail = err.response?.data ? JSON.stringify(err.response.data).slice(0, 300) : err.message;
       console.error(`  ✗ ${account.brand} 수집 실패: ${detail}`);
       if (err.response?.status === 401 || err.response?.status === 403) {
         console.error('     → 인증 오류: KAKAO_REST_API_KEY 또는 OAuth 토큰 확인 필요');

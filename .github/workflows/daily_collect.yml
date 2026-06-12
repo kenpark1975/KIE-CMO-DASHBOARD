@@ -29,7 +29,9 @@ jobs:
           cache: 'npm'
 
       - name: 의존성 설치
-        run: npm ci
+        run: |
+          npm ci
+          npm install xlsx@0.18.5 --no-save
 
       # ── 환경 변수 파일 복원 ──────────────────────────────
       - name: config/.env 생성

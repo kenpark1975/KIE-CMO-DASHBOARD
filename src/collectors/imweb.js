@@ -78,23 +78,22 @@ function authHeaders(token) {
 }
 
 // ─── 주문 목록 (페이지네이션) ────────────────────────────────────────────────
-async function fetchOrders(token, from, to) {
+// 아임웹 API는 order_date_from/to를 unix timestamp(초)로 받음.
+// 1차: timestamp 방식 → 0건이면 2차: YYYY-MM-DD 문자열 방식으로 재시도.
+async function fetchOrdersWithParams(token, dateParams) {
   const orders = [];
   let offset = 0;
 
   while (true) {
     const res = await axios.get(`${BASE_URL}/shop/orders`, {
       headers: authHeaders(token),
-      params: {
-        order_date_from: from,
-        order_date_to:   to,
-        limit:  PAGE_LIMIT,
-        offset,
-      },
+      params: { ...dateParams, limit: PAGE_LIMIT, offset },
     });
 
-    if (DEBUG && offset === 0) {
-      console.log('[Imweb][debug] orders 응답 샘플:', JSON.stringify(res.data).slice(0, 800));
+    if (offset === 0) {
+      const pg = res.data?.data?.pagenation || res.data?.data?.pagination;
+      if (pg) console.log(`  (pagenation: ${JSON.stringify(pg).slice(0, 200)})`);
+      if (DEBUG) console.log('[Imweb][debug] orders 응답 샘플:', JSON.stringify(res.data).slice(0, 800));
     }
 
     const list = res.data?.data?.list || res.data?.data || [];
@@ -106,6 +105,19 @@ async function fetchOrders(token, from, to) {
     await new Promise(r => setTimeout(r, 200));
   }
 
+  return orders;
+}
+
+async function fetchOrders(token, from, to) {
+  // KST 기준 from 00:00:00 ~ to 23:59:59 → unix timestamp(초)
+  const tsFrom = Math.floor(new Date(`${from}T00:00:00+09:00`).getTime() / 1000);
+  const tsTo   = Math.floor(new Date(`${to}T23:59:59+09:00`).getTime() / 1000);
+
+  let orders = await fetchOrdersWithParams(token, { order_date_from: tsFrom, order_date_to: tsTo });
+  if (orders.length) return orders;
+
+  console.log('  (timestamp 방식 0건 → 날짜 문자열 방식 재시도)');
+  orders = await fetchOrdersWithParams(token, { order_date_from: from, order_date_to: to });
   return orders;
 }
 

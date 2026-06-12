@@ -6,7 +6,12 @@
       "name_en": "Breezecare",
       "color": "#00e5a0",
       "line": "본앤메이드",
-      "channels": ["자사몰", "스마트스토어", "쿠팡"],
+      "channels": [
+        "자사몰",
+        "스마트스토어",
+        "쿠팡",
+        "카카오선물하기"
+      ],
       "active": true
     },
     {
@@ -15,7 +20,12 @@
       "name_en": "Hell's Kitchen",
       "color": "#ff8c42",
       "line": "본앤메이드",
-      "channels": ["자사몰", "스마트스토어", "쿠팡"],
+      "channels": [
+        "자사몰",
+        "스마트스토어",
+        "쿠팡",
+        "카카오선물하기"
+      ],
       "active": true
     },
     {
@@ -24,25 +34,74 @@
       "name_en": "Beauty Device",
       "color": "#c084fc",
       "line": "HTK",
-      "channels": ["자사몰", "스마트스토어", "쿠팡"],
+      "channels": [
+        "자사몰",
+        "스마트스토어",
+        "쿠팡"
+      ],
       "active": true,
       "note": "인수 예정 — 브랜드명 확정 후 업데이트"
     }
   ],
-
   "commerce_channels": [
-    { "code": "SELFMALL", "name": "자사몰", "platform": "카페24", "source": "ONEWMS" },
-    { "code": "SMARTSTORE", "name": "스마트스토어", "platform": "네이버", "source": "ONEWMS" },
-    { "code": "COUPANG", "name": "쿠팡", "platform": "쿠팡", "source": "ONEWMS" }
+    {
+      "code": "SELFMALL",
+      "name": "자사몰",
+      "platform": "아임웹",
+      "source": "imweb_api"
+    },
+    {
+      "code": "SMARTSTORE",
+      "name": "스마트스토어",
+      "platform": "네이버",
+      "source": "naver_commerce_api"
+    },
+    {
+      "code": "COUPANG",
+      "name": "쿠팡",
+      "platform": "쿠팡",
+      "source": "coupang_api"
+    },
+    {
+      "code": "KAKAO_GIFT",
+      "name": "카카오선물하기",
+      "platform": "카카오쇼핑",
+      "source": "kakao_shopping_api",
+      "note": "인증키 출처 확인 후 collector 작성 예정"
+    }
   ],
-
   "ad_channels": [
-    { "code": "META", "name": "메타", "source": "api", "roas_target": 300 },
-    { "code": "GOOGLE", "name": "구글", "source": "api", "roas_target": 300 },
-    { "code": "NAVER_SA", "name": "네이버SA", "source": "api", "roas_target": 300 },
-    { "code": "COUPANG_ADS", "name": "쿠팡 애즈", "source": "csv_manual", "roas_target": 300 }
+    {
+      "code": "META",
+      "name": "메타",
+      "source": "api",
+      "roas_target": 300
+    },
+    {
+      "code": "GOOGLE",
+      "name": "구글",
+      "source": "api",
+      "roas_target": 300
+    },
+    {
+      "code": "NAVER_SA",
+      "name": "네이버SA",
+      "source": "api",
+      "roas_target": 300
+    },
+    {
+      "code": "COUPANG_ADS",
+      "name": "쿠팡 애즈",
+      "source": "csv_manual",
+      "roas_target": 300
+    },
+    {
+      "code": "KAKAO_MOMENT",
+      "name": "카카오 모먼트",
+      "source": "api",
+      "roas_target": 300
+    }
   ],
-
   "kpi_thresholds": {
     "roas_min": 300,
     "contribution_margin_min": 30,
@@ -51,7 +110,6 @@
     "ltv_cac_ratio_min": 3.0,
     "selfmall_ratio_target": 40
   },
-
   "schedule": {
     "auto_collect_cron": "0 6 * * *",
     "manual_csv_day": "monday",

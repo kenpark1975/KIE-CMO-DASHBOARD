@@ -3,12 +3,14 @@
  * 수집 대상: 주문/매출 데이터 (브리즈케어·헬스키친)
  * 출력 시트: RAW_orders_smartstore
  *
- * 인증: Client Credentials (Client ID + Secret → Bearer Token)
+ * 인증: 커머스API 전자서명 방식 — client_secret_sign = Base64(bcrypt(clientId_timestamp, secret))
+ *       ⚠️ Basic 인증 아님. bcryptjs 필요 (워크플로 의존성 단계에 npm install bcryptjs --no-save)
  * 실행: node src/collectors/smartstore.js [--date=YYYY-MM-DD] [--days=N]
  */
 
 require('dotenv').config({ path: 'config/.env' });
-const axios = require('axios');
+const axios  = require('axios');
+const bcrypt = require('bcryptjs');
 const { writeToSheet } = require('../sheets/writer');
 
 const BASE_URL = 'https://api.commerce.naver.com/external';
@@ -50,18 +52,25 @@ function getDateRange() {
   };
 }
 
-// Bearer 토큰 발급
+// Bearer 토큰 발급 — 전자서명(client_secret_sign) 방식
 async function getToken(account) {
-  const credentials = Buffer.from(`${account.clientId}:${account.clientSecret}`).toString('base64');
+  const timestamp = Date.now();
+  // clientSecret을 bcrypt salt로 사용 ($2a$... 형식)
+  const hashed = bcrypt.hashSync(`${account.clientId}_${timestamp}`, account.clientSecret);
+  const sign   = Buffer.from(hashed).toString('base64');
+
+  const params = new URLSearchParams({
+    client_id:          account.clientId,
+    timestamp:          String(timestamp),
+    client_secret_sign: sign,
+    grant_type:         'client_credentials',
+    type:               'SELF',
+  });
+
   const res = await axios.post(
     `${BASE_URL}/v1/oauth2/token`,
-    'grant_type=client_credentials',
-    {
-      headers: {
-        'Authorization': `Basic ${credentials}`,
-        'Content-Type':  'application/x-www-form-urlencoded',
-      },
-    }
+    params.toString(),
+    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
   );
   return res.data.access_token;
 }
@@ -76,8 +85,8 @@ async function fetchOrders(token, from, to) {
       `${BASE_URL}/v1/pay-order/seller/search`,
       {
         searchDateType:  'PAYMENT_DATE',
-        searchStartDate: `${from}T00:00:00.000Z`,
-        searchEndDate:   `${to}T23:59:59.000Z`,
+        searchStartDate: `${from}T00:00:00.000+09:00`,
+        searchEndDate:   `${to}T23:59:59.999+09:00`,
         page,
         size: 300,
       },
@@ -171,6 +180,7 @@ async function main() {
       console.log(`  ✓ ${account.label}: ${rows.length}일치 데이터 (주문 ${orders.length}건)`);
     } catch (err) {
       console.error(`  ✗ ${account.label} 실패: ${err.response?.data?.message || err.message}`);
+      if (err.response?.data) console.error('    상세:', JSON.stringify(err.response.data));
     }
   }
 

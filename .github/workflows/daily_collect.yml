@@ -31,7 +31,7 @@ jobs:
       - name: 의존성 설치
         run: |
           npm ci
-          npm install xlsx@0.18.5 --no-save
+          npm install xlsx@0.18.5 bcryptjs --no-save
 
       # ── 환경 변수 파일 복원 ──────────────────────────────
       - name: config/.env 생성
